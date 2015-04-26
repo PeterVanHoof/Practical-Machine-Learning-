@@ -1,0 +1,74 @@
+---
+title: "Practical Machine Learning - Course Project"
+author: "Peter Van Hoof"
+date: "26 Apr 2015"
+output: html_document
+---
+to do
+```{r message=FALSE, warning=FALSE}
+library(caret)
+library(doMC)
+```
+
+to do
+```{r}
+registerDoMC(cores=2)
+set.seed(1324)
+setwd("~/Documents/Coursera/08. Machine Learning")
+```
+
+to do
+```{r}
+training_file <- "./data/pml-training.csv"
+dataset <- read.csv(file = training_file, header = TRUE )
+```
+
+### Clean-up of the data
+
+1. Omit the first 7 columns as these features
+2. Omit all columns as soon as one row contains an NA value
+3. Omit all statistical features where the column name contains (min, max, skewness or kurtosis)
+4. Omit all features where the column name contains "amplitude" as these features contain #DIV/0! values
+
+```{r}
+dataset <- subset(dataset, select = -(1:7))
+dataset <- dataset[,(colSums(is.na(dataset)) == 0)]
+dataset <- dataset[,-grep("min|max|skewness|kurtosis|amplitude",colnames(dataset),value=F)]
+```
+
+
+Create a training set and a testing set based on the training data. 
+```{r}
+inTrain <- createDataPartition(y=dataset$classe, p=0.7, list = FALSE)
+training <- dataset[inTrain,]
+testing <- dataset[-inTrain,]
+```
+
+Build the model based on the training data and the random forest method. ntree was set to 50, because with the default value it took too long to calculate. For trainContol the cross-validation method was used with 4 folds were used.
+```{r cache=TRUE}
+modFit <- train(classe ~ ., ntree = 50,
+                 trControl = trainControl(method = "cv", number = 4),
+                 data=training, 
+                 method = "rf")
+```
+
+With the model we can predict the feature **classe** based on the features in the testing set and compare it with the know classe outcome which is also stored in the testing set.
+```{r cache=TRUE}
+predicted_classe <- predict(modFit, testing)
+expected_classe <- testing$classe
+xtab <- table(predicted_classe,expected_classe)
+confusionMatrix(xtab)
+```
+
+## Out of sample error rate
+The out of sample error rate = 1 - accuracy
+```{r}
+1 - confusionMatrix(xtab)$overall[1]
+```
+
+# Test dataset
+```{r}
+testing_file <-  "./data/pml-testing.csv"
+testingset <- read.csv(file = testing_file, header = TRUE)
+predict(modFit,testingset)
+```
