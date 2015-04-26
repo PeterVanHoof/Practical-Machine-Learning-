@@ -4,28 +4,38 @@ author: "Peter Van Hoof"
 date: "26 Apr 2015"
 output: html_document
 ---
-to do
+
+# Goal of the project 
+6 participants performed barbell lifts correctly and incorrectly in 5 different ways. While they performed these exercises, the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants was captured. There were 2 datasets, one the **training** and one the **testing**. The goal of this project is to predict in which manner the exercise was performed, based on the data available in the **testing** set.
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+# Model creation
+
+### Load required packages
 ```{r message=FALSE, warning=FALSE}
 library(caret)
 library(doMC)
 ```
 
-to do
+### Speed and reproducability
+In order to speed up caret's train function with random forest, one of the things you can do is to use parallel processing. Therefore we have to set the number of cores (which is 2 on my computer).
 ```{r}
 registerDoMC(cores=2)
 set.seed(1324)
 setwd("~/Documents/Coursera/08. Machine Learning")
 ```
 
-to do
+### Loading the training data
 ```{r}
 training_file <- "./data/pml-training.csv"
 dataset <- read.csv(file = training_file, header = TRUE )
 ```
 
 ### Clean-up of the data
+The training set contains 160 variables of which the following can be ommited:
 
-1. Omit the first 7 columns as these features
+1. Omit the first 7 columns as these features are not captured by the accelerometers,these are metadata.
 2. Omit all columns as soon as one row contains an NA value
 3. Omit all statistical features where the column name contains (min, max, skewness or kurtosis)
 4. Omit all features where the column name contains "amplitude" as these features contain #DIV/0! values
@@ -37,14 +47,16 @@ dataset <- dataset[,-grep("min|max|skewness|kurtosis|amplitude",colnames(dataset
 ```
 
 
-Create a training set and a testing set based on the training data. 
+### Create a training set and a testing
+We split the dataset in a **training** and a **testing** set
 ```{r}
 inTrain <- createDataPartition(y=dataset$classe, p=0.7, list = FALSE)
 training <- dataset[inTrain,]
 testing <- dataset[-inTrain,]
 ```
 
-Build the model based on the training data and the random forest method. ntree was set to 50, because with the default value it took too long to calculate. For trainContol the cross-validation method was used with 4 folds were used.
+### Random forest model
+Build the model based on the training data and the random forest method. ntree was set to 50, because with the default value it took too long to calculate. For trainContol the cross-validation method was used with 4 folds.
 ```{r cache=TRUE}
 modFit <- train(classe ~ ., ntree = 50,
                  trControl = trainControl(method = "cv", number = 4),
@@ -52,6 +64,7 @@ modFit <- train(classe ~ ., ntree = 50,
                  method = "rf")
 ```
 
+### Validate the model
 With the model we can predict the feature **classe** based on the features in the testing set and compare it with the know classe outcome which is also stored in the testing set.
 ```{r cache=TRUE}
 predicted_classe <- predict(modFit, testing)
@@ -60,13 +73,13 @@ xtab <- table(predicted_classe,expected_classe)
 confusionMatrix(xtab)
 ```
 
-## Out of sample error rate
+### Out of sample error rate
 The out of sample error rate = 1 - accuracy
 ```{r}
 1 - confusionMatrix(xtab)$overall[1]
 ```
 
-# Test dataset
+### Test dataset
 ```{r}
 testing_file <-  "./data/pml-testing.csv"
 testingset <- read.csv(file = testing_file, header = TRUE)

@@ -68,20 +68,35 @@ img {
 </div>
 
 
-<p>to do</p>
+<div id="goal-of-the-project" class="section level1">
+<h1>Goal of the project</h1>
+<p>6 participants performed barbell lifts correctly and incorrectly in 5 different ways. While they performed these exercises, the data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants was captured. There were 2 datasets, one the <strong>training</strong> and one the <strong>testing</strong>. The goal of this project is to predict in which manner the exercise was performed, based on the data available in the <strong>testing</strong> set.</p>
+<p>More information is available from the website here: <a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a> (see the section on the Weight Lifting Exercise Dataset).</p>
+</div>
+<div id="model-creation" class="section level1">
+<h1>Model creation</h1>
+<div id="load-required-packages" class="section level3">
+<h3>Load required packages</h3>
 <pre class="r"><code>library(caret)
 library(doMC)</code></pre>
-<p>to do</p>
+</div>
+<div id="speed-and-reproducability" class="section level3">
+<h3>Speed and reproducability</h3>
+<p>In order to speed up caret’s train function with random forest, one of the things you can do is to use parallel processing. Therefore we have to set the number of cores (which is 2 on my computer).</p>
 <pre class="r"><code>registerDoMC(cores=2)
 set.seed(1324)
 setwd(&quot;~/Documents/Coursera/08. Machine Learning&quot;)</code></pre>
-<p>to do</p>
+</div>
+<div id="loading-the-training-data" class="section level3">
+<h3>Loading the training data</h3>
 <pre class="r"><code>training_file &lt;- &quot;./data/pml-training.csv&quot;
 dataset &lt;- read.csv(file = training_file, header = TRUE )</code></pre>
+</div>
 <div id="clean-up-of-the-data" class="section level3">
 <h3>Clean-up of the data</h3>
+<p>The training set contains 160 variables of which the following can be ommited:</p>
 <ol style="list-style-type: decimal">
-<li>Omit the first 7 columns as these features</li>
+<li>Omit the first 7 columns as these features are not captured by the accelerometers,these are metadata.</li>
 <li>Omit all columns as soon as one row contains an NA value</li>
 <li>Omit all statistical features where the column name contains (min, max, skewness or kurtosis)</li>
 <li>Omit all features where the column name contains “amplitude” as these features contain #DIV/0! values</li>
@@ -89,11 +104,17 @@ dataset &lt;- read.csv(file = training_file, header = TRUE )</code></pre>
 <pre class="r"><code>dataset &lt;- subset(dataset, select = -(1:7))
 dataset &lt;- dataset[,(colSums(is.na(dataset)) == 0)]
 dataset &lt;- dataset[,-grep(&quot;min|max|skewness|kurtosis|amplitude&quot;,colnames(dataset),value=F)]</code></pre>
-<p>Create a training set and a testing set based on the training data.</p>
+</div>
+<div id="create-a-training-set-and-a-testing" class="section level3">
+<h3>Create a training set and a testing</h3>
+<p>We split the dataset in a <strong>training</strong> and a <strong>testing</strong> set</p>
 <pre class="r"><code>inTrain &lt;- createDataPartition(y=dataset$classe, p=0.7, list = FALSE)
 training &lt;- dataset[inTrain,]
 testing &lt;- dataset[-inTrain,]</code></pre>
-<p>Build the model based on the training data and the random forest method. ntree was set to 50, because with the default value it took too long to calculate. For trainContol the cross-validation method was used with 4 folds were used.</p>
+</div>
+<div id="random-forest-model" class="section level3">
+<h3>Random forest model</h3>
+<p>Build the model based on the training data and the random forest method. ntree was set to 50, because with the default value it took too long to calculate. For trainContol the cross-validation method was used with 4 folds.</p>
 <pre class="r"><code>modFit &lt;- train(classe ~ ., ntree = 50,
                  trControl = trainControl(method = &quot;cv&quot;, number = 4),
                  data=training, 
@@ -101,7 +122,10 @@ testing &lt;- dataset[-inTrain,]</code></pre>
 <pre><code>## Loading required package: randomForest
 ## randomForest 4.6-10
 ## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<p>With the model we can predict the classe based on the features in the testing set and compare it with the know classe outcome which is also stored in the testing set.</p>
+</div>
+<div id="validate-the-model" class="section level3">
+<h3>Validate the model</h3>
+<p>With the model we can predict the feature <strong>classe</strong> based on the features in the testing set and compare it with the know classe outcome which is also stored in the testing set.</p>
 <pre class="r"><code>predicted_classe &lt;- predict(modFit, testing)
 expected_classe &lt;- testing$classe
 xtab &lt;- table(predicted_classe,expected_classe)
@@ -138,24 +162,24 @@ confusionMatrix(xtab)</code></pre>
 ## Detection Prevalence   0.2867   0.1924   0.1742   0.1640   0.1828
 ## Balanced Accuracy      0.9985   0.9926   0.9936   0.9956   0.9967</code></pre>
 </div>
-<div id="out-of-sample-error-rate" class="section level2">
-<h2>Out of sample error rate</h2>
+<div id="out-of-sample-error-rate" class="section level3">
+<h3>Out of sample error rate</h3>
 <p>The out of sample error rate = 1 - accuracy</p>
 <pre class="r"><code>1 - confusionMatrix(xtab)$overall[1]</code></pre>
 <pre><code>##    Accuracy 
 ## 0.006796941</code></pre>
 </div>
-<div id="test-dataset" class="section level1">
-<h1>Test dataset</h1>
+<div id="test-dataset" class="section level3">
+<h3>Test dataset</h3>
 <pre class="r"><code>testing_file &lt;-  &quot;./data/pml-testing.csv&quot;
 testingset &lt;- read.csv(file = testing_file, header = TRUE)
-#testingset &lt;- testingset[,colnames(testingset) %in% colnames(testingset)]
 predict(modFit,testingset)</code></pre>
 <pre><code>## Loading required package: randomForest
 ## randomForest 4.6-10
 ## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 <pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
+</div>
 </div>
 
 
